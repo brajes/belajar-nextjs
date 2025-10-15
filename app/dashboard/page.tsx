@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [enrollingCourseId, setEnrollingCourseId] = useState<number | null>(null);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     // Check if user is logged in
@@ -52,11 +53,29 @@ export default function DashboardPage() {
 
   const fetchCourses = async (token: string) => {
     try {
-      const coursesData = await apiClient.getCourses(token);
+      // Fetch courses and enrollments in parallel
+      const [coursesData, enrolledIds] = await Promise.all([
+        apiClient.getCourses(token),
+        apiClient.getMyEnrollments(token),
+      ]);
+
       // Backend returns { courses: [...], offset, limit, count }
       setCourses(coursesData?.courses || []);
+      setEnrolledCourseIds(new Set(enrolledIds));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch courses');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch courses';
+
+      // Check if it's an authentication error
+      if (errorMessage.includes('token') || errorMessage.includes('expired') || errorMessage.includes('invalid')) {
+        // Clear invalid token and redirect to login
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        router.push('/login');
+        return;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -81,12 +100,30 @@ export default function DashboardPage() {
 
     try {
       await apiClient.enrollInCourse(courseId, token);
+      // Update enrolled courses list
+      setEnrolledCourseIds(prev => new Set([...prev, courseId]));
       // Redirect to course page after successful enrollment
       router.push(`/courses/${courseId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to enroll in course');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to enroll in course';
+
+      // Check if it's an authentication error
+      if (errorMessage.includes('token') || errorMessage.includes('expired') || errorMessage.includes('invalid')) {
+        // Clear invalid token and redirect to login
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        router.push('/login');
+        return;
+      }
+
+      setError(errorMessage);
       setEnrollingCourseId(null);
     }
+  };
+
+  const handleViewCourse = (courseId: number) => {
+    router.push(`/courses/${courseId}`);
   };
 
   if (loading) {
@@ -110,12 +147,22 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            {user && user.role === 'admin' && (
+              <Link
+                href="/admin/courses"
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                Admin Panel
+              </Link>
+            )}
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -177,13 +224,22 @@ export default function DashboardPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     {course.description}
                   </p>
-                  <button
-                    onClick={() => handleEnroll(course.id)}
-                    disabled={enrollingCourseId === course.id}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {enrollingCourseId === course.id ? 'Enrolling...' : 'Enroll'}
-                  </button>
+                  {enrolledCourseIds.has(course.id) ? (
+                    <button
+                      onClick={() => handleViewCourse(course.id)}
+                      className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    >
+                      View Course
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleEnroll(course.id)}
+                      disabled={enrollingCourseId === course.id}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {enrollingCourseId === course.id ? 'Enrolling...' : 'Enroll'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
