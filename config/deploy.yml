@@ -1,0 +1,61 @@
+# Kamal deployment configuration for Belajar Next.js Frontend
+
+service: belajar-frontend
+
+image: brajes/belajar-frontend
+
+servers:
+  web:
+    hosts:
+      - 203.194.113.14
+
+# Use Docker Hub registry
+registry:
+  server: docker.io
+  username: brajes
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+# Environment variables for the application
+env:
+  clear:
+    NODE_ENV: production
+    PORT: 3000
+    HOSTNAME: 0.0.0.0
+  secret:
+    - NEXT_PUBLIC_API_URL
+
+# Proxy configuration (kamal-proxy for Kamal 2.x)
+# IMPORTANT: Frontend is root path service - it MUST have SSL configured
+# All other services (backend with /api) inherit SSL from this
+proxy:
+  ssl: true
+  host: fungsikuadrat.my.id
+  app_port: 3000
+  forward_headers: true
+  # No path_prefix = root path (handles all requests not matching other services)
+  healthcheck:
+    path: /
+    interval: 10
+    timeout: 5
+  response_timeout: 60
+
+# Builder configuration
+builder:
+  arch: amd64
+  # Use multi-stage build from Dockerfile
+  context: .
+  dockerfile: Dockerfile
+  # Pass build arguments (without /api since it's added in fetch calls)
+  args:
+    NEXT_PUBLIC_API_URL: "https://fungsikuadrat.my.id"
+
+# SSH configuration
+ssh:
+  user: root
+
+# Retain last 5 containers for quick rollback
+retain_containers: 5
+
+# Asset path (optional, if you need to serve static assets)
+# asset_path: /app/public

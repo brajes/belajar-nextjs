@@ -64,6 +64,23 @@ export interface CourseContent {
   updated_at: string;
 }
 
+export interface Course {
+  id: number;
+  name: string;
+  description: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  chapters?: CourseChapter[];
+}
+
+export interface Enrollment {
+  id: number;
+  user_id: number;
+  course_id: number;
+  enrolled_at: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -107,7 +124,7 @@ class ApiClient {
     return result.data;
   }
 
-  async getCourses(token?: string) {
+  async getCourses(token?: string): Promise<{ courses: Course[]; count: number }> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
@@ -126,11 +143,11 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to fetch courses');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<{ courses: Course[]; count: number }> = await response.json();
     return result.data;
   }
 
-  async enrollInCourse(courseId: number, token: string) {
+  async enrollInCourse(courseId: number, token: string): Promise<Enrollment> {
     const response = await fetch(`${this.baseUrl}/api/enrollments`, {
       method: 'POST',
       headers: {
@@ -145,11 +162,11 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to enroll in course');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<Enrollment> = await response.json();
     return result.data;
   }
 
-  async getCourse(courseId: number, token?: string) {
+  async getCourse(courseId: number, token?: string): Promise<Course> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
@@ -168,7 +185,7 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to fetch course');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<Course> = await response.json();
     return result.data;
   }
 
@@ -237,7 +254,7 @@ class ApiClient {
   }
 
   // Admin API methods
-  async createCourse(data: { name: string; description: string }, token: string) {
+  async createCourse(data: { name: string; description: string }, token: string): Promise<Course> {
     const response = await fetch(`${this.baseUrl}/api/courses`, {
       method: 'POST',
       headers: {
@@ -252,11 +269,11 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to create course');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<Course> = await response.json();
     return result.data;
   }
 
-  async updateCourse(courseId: number, data: { name: string; description: string }, token: string) {
+  async updateCourse(courseId: number, data: { name: string; description: string }, token: string): Promise<Course> {
     const response = await fetch(`${this.baseUrl}/api/courses/${courseId}`, {
       method: 'PUT',
       headers: {
@@ -271,11 +288,11 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to update course');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<Course> = await response.json();
     return result.data;
   }
 
-  async deleteCourse(courseId: number, token: string) {
+  async deleteCourse(courseId: number, token: string): Promise<{ message: string }> {
     const response = await fetch(`${this.baseUrl}/api/courses/${courseId}`, {
       method: 'DELETE',
       headers: {
@@ -289,7 +306,7 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to delete course');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<{ message: string }> = await response.json();
     return result.data;
   }
 
@@ -300,7 +317,7 @@ class ApiClient {
     description?: string;
     chapter_order?: number;
     is_published?: boolean;
-  }, token: string) {
+  }, token: string): Promise<CourseChapter> {
     const response = await fetch(`${this.baseUrl}/api/chapters`, {
       method: 'POST',
       headers: {
@@ -315,7 +332,7 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to create chapter');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<CourseChapter> = await response.json();
     return result.data;
   }
 
@@ -324,7 +341,7 @@ class ApiClient {
     description?: string;
     chapter_order?: number;
     is_published?: boolean;
-  }, token: string) {
+  }, token: string): Promise<CourseChapter> {
     const response = await fetch(`${this.baseUrl}/api/chapters/${chapterId}`, {
       method: 'PUT',
       headers: {
@@ -339,11 +356,11 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to update chapter');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<CourseChapter> = await response.json();
     return result.data;
   }
 
-  async deleteChapter(chapterId: number, token: string) {
+  async deleteChapter(chapterId: number, token: string): Promise<{ message: string }> {
     const response = await fetch(`${this.baseUrl}/api/chapters/${chapterId}`, {
       method: 'DELETE',
       headers: {
@@ -357,7 +374,7 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to delete chapter');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<{ message: string }> = await response.json();
     return result.data;
   }
 
@@ -395,7 +412,7 @@ class ApiClient {
     content_order?: number;
     is_published?: boolean;
     duration_minutes?: number;
-  }, token: string) {
+  }, token: string): Promise<CourseContent> {
     const response = await fetch(`${this.baseUrl}/api/contents`, {
       method: 'POST',
       headers: {
@@ -410,7 +427,7 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to create content');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<CourseContent> = await response.json();
     return result.data;
   }
 
@@ -423,7 +440,7 @@ class ApiClient {
     content_order?: number;
     is_published?: boolean;
     duration_minutes?: number;
-  }, token: string) {
+  }, token: string): Promise<CourseContent> {
     const response = await fetch(`${this.baseUrl}/api/contents/${contentId}`, {
       method: 'PUT',
       headers: {
@@ -438,11 +455,11 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to update content');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<CourseContent> = await response.json();
     return result.data;
   }
 
-  async deleteContent(contentId: number, token: string) {
+  async deleteContent(contentId: number, token: string): Promise<{ message: string }> {
     const response = await fetch(`${this.baseUrl}/api/contents/${contentId}`, {
       method: 'DELETE',
       headers: {
@@ -456,7 +473,7 @@ class ApiClient {
       throw new Error(error.error || error.message || 'Failed to delete content');
     }
 
-    const result: ApiResponse<any> = await response.json();
+    const result: ApiResponse<{ message: string }> = await response.json();
     return result.data;
   }
 }
